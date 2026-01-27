@@ -42,11 +42,13 @@ build_cert_for_base() {
 
 # 1) haproxy-certs/ con al menos un .pem
 _first_pem=""
-for _f in "$HAPROXY_CRTS_DIR"/*.pem 2>/dev/null; do
-    [ -f "$_f" ] || continue
-    _first_pem="$_f"
-    break
-done
+if [ -d "$HAPROXY_CRTS_DIR" ]; then
+    for _f in "$HAPROXY_CRTS_DIR"/*.pem; do
+        [ -f "$_f" ] || continue
+        _first_pem="$_f"
+        break
+    done
+fi
 if [ -n "$_first_pem" ]; then
     if openssl x509 -in "$_first_pem" -noout -checkend "$CHECKEND_SECONDS" 2>/dev/null; then
         echo "Certificate OK: $HAPROXY_CRTS_DIR (multi-dominio)"
@@ -60,8 +62,9 @@ fi
 _built=0
 if [ -d "$CONF_LIVE" ]; then
     for _d in "$CONF_LIVE"/*/; do
-        [ -d "$_d" ] || continue
-        _base=$(basename "$_d")
+        [ -d "$_d" ] || [ -f "$_d" ] || continue
+        _base=$(basename "$_d" 2>/dev/null || echo "")
+        [ -n "$_base" ] || continue
         if build_cert_for_base "$_base"; then
             _built=1
             _fn="$(echo "$_base" | tr '.' '_').pem"

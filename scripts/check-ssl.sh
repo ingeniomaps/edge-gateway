@@ -21,13 +21,15 @@ HAPROXY_PEM="$CERT_DIR/haproxy.pem"
 LIVE_BASE="$CERT_DIR/conf/live"
 
 # 1) haproxy-certs/*.pem (prioridad): comprobar el primero que sea válido
-for _p in "$HAPROXY_CRTS_DIR"/*.pem 2>/dev/null; do
-    [[ -f "$_p" ]] || continue
-    if openssl x509 -in "$_p" -noout -checkend 86400 >/dev/null 2>&1; then
-        log_success "Certificados SSL válidos en $HAPROXY_CRTS_DIR (multi-dominio)"
-        exit 0
-    fi
-done
+if [ -d "$HAPROXY_CRTS_DIR" ]; then
+    for _p in "$HAPROXY_CRTS_DIR"/*.pem; do
+        [[ -f "$_p" ]] || continue
+        if openssl x509 -in "$_p" -noout -checkend 86400 >/dev/null 2>&1; then
+            log_success "Certificados SSL válidos en $HAPROXY_CRTS_DIR (multi-dominio)"
+            exit 0
+        fi
+    done
+fi
 if ls "$HAPROXY_CRTS_DIR"/*.pem 1>/dev/null 2>&1; then
     log_warning "Certificados en $HAPROXY_CRTS_DIR expirados o por expirar en 24h"
     exit 1
