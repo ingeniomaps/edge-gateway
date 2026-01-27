@@ -1,0 +1,12 @@
+# Backend for ${DNS_NAME}
+# Generated automatically - DO NOT EDIT MANUALLY
+# Health: solo TCP (no GET /health); si tu API tiene /health, descomenta option httpchk y http-check.
+# Servidor: host.docker.internal = host (app en máquina); en otro contenedor usa el nombre del servicio.
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+    # option httpchk GET /health
+    # http-check expect status 200
+    # http-check send-state
+    server dev host.docker.internal:3000 check inter 5s fall 3 rise 2
+    cookie SERVERID insert indirect nocache httponly secure

@@ -1,0 +1,34 @@
+# Backend for ${DNS_NAME} (Streaming/SSE)
+# Generated automatically - DO NOT EDIT MANUALLY
+# 
+# Server-Sent Events (SSE) y streaming HTTP: conexiones unidireccionales largas.
+# Para SSE, timeout client/server son críticos (no timeout tunnel).
+#
+# IMPORTANTE:
+# - NO usar option http-server-close (rompe conexiones de streaming)
+# - timeout client/server: deben ser > tiempo entre eventos/pings
+# - timeout http-request: largo para requests de streaming
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+    
+    # Streaming: mantener conexiones abiertas (sobrescribe defaults)
+    option http-keep-alive  # Mantiene conexión abierta (opuesto a http-server-close)
+    
+    # Timeouts largos para SSE/streaming (ajusta según frecuencia de pings/eventos)
+    # Si envías pings cada 5 min, usa al menos 6-10 min
+    timeout client 10m
+    timeout server 10m
+    timeout http-request 10m
+    timeout connect 10s
+    
+    # Health check: TCP o HTTP según tu servicio
+    # option httpchk GET /health
+    # http-check expect status 200
+    
+    # Servidores streaming/SSE
+    server stream1 host.docker.internal:3000 check inter 5s fall 3 rise 2
+    # server stream2 192.168.1.10:3000 check inter 5s fall 3 rise 2
+    
+    # Si el backend usa TLS, añade 'ssl verify none':
+    # server stream1 192.168.1.10:3000 check ssl verify none inter 5s fall 3 rise 2

@@ -1,0 +1,10 @@
+logs/
+*.log
+.env
+certs/
+*.pem
+*.key
+*.crt
+*.pem.bak
+dns-configs/
+*.state

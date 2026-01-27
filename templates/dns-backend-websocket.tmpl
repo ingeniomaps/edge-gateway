@@ -1,0 +1,30 @@
+# Backend for ${DNS_NAME} (WebSocket)
+# Generated automatically - DO NOT EDIT MANUALLY
+# 
+# WebSocket: conexiones bidireccionales persistentes. HAProxy detecta automáticamente
+# el upgrade (Connection: Upgrade) y cambia a modo tunnel.
+#
+# IMPORTANTE:
+# - option http-server-close: cierra conexión al servidor tras la sesión (recomendado)
+# - timeout tunnel: tiempo de conexión WebSocket inactiva (1h por defecto en defaults)
+# - timeout client/server: deben ser largos si la conexión puede estar inactiva
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+    
+    # WebSocket: mantener conexiones persistentes
+    option http-server-close
+    timeout tunnel 1h
+    timeout client 1h
+    timeout server 1h
+    
+    # Health check: TCP (recomendado) o HTTP según tu servicio
+    # option httpchk GET /health
+    # http-check expect status 200
+    
+    # Servidores WebSocket
+    server ws1 host.docker.internal:3000 check inter 5s fall 3 rise 2
+    # server ws2 192.168.1.10:3000 check inter 5s fall 3 rise 2
+    
+    # Si el backend usa TLS, añade 'ssl verify none':
+    # server ws1 192.168.1.10:3000 check ssl verify none inter 5s fall 3 rise 2

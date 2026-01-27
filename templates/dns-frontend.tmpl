@@ -1,0 +1,51 @@
+# Frontend configuration for ${DNS_NAME}
+# Generated automatically - DO NOT EDIT MANUALLY
+# To modify, edit the template or update DNS_LIST in .env
+
+frontend frontend_${DNS_NORMALIZED}
+    bind *:443 ssl crt /etc/ssl/certs/haproxy.pem alpn h2,http/1.1
+    
+    # ACL for this DNS
+    acl is_${DNS_NORMALIZED} hdr(host) -i ${DNS_NAME}
+    
+    # Routing
+    use_backend backend_${DNS_NORMALIZED} if is_${DNS_NORMALIZED}
+    
+    # Security headers (2026 best practices)
+    http-response set-header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    http-response set-header X-Content-Type-Options "nosniff"
+    http-response set-header X-Frame-Options "DENY"
+    http-response set-header X-XSS-Protection "1; mode=block"
+    http-response set-header Referrer-Policy "strict-origin-when-cross-origin"
+    http-response set-header Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    
+    # Rate limiting (DDoS protection)
+    stick-table type ip size 100k expire 30s store http_req_rate(10s),conn_rate(10s)
+    http-request track-sc0 src
+    http-request deny if { sc_http_req_rate(0) gt 100 }
+    http-request deny if { sc_conn_rate(0) gt 50 }
+
+# Backend configuration for ${DNS_NAME}
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+    
+    # Health check (2026 best practices)
+    option httpchk GET /health
+    http-check expect status 200
+    http-check send-state
+    
+    # Server definitions - UPDATE THESE WITH YOUR ACTUAL SERVERS
+    # Format: server <name> <ip>:<port> check <options>
+    # Example for HTTP:
+    # server server1 192.168.1.10:80 check inter 5s fall 3 rise 2 maxconn 100
+    # server server2 192.168.1.11:80 check inter 5s fall 3 rise 2 maxconn 100
+    # Example for HTTPS backend:
+    # server server1 192.168.1.10:443 check ssl verify none inter 5s fall 3 rise 2
+    
+    # Cookie persistence (optional)
+    cookie SERVERID insert indirect nocache httponly secure
+    
+    # Error handling
+    errorfile 502 /etc/haproxy/errors/502.http
+    errorfile 503 /etc/haproxy/errors/503.http

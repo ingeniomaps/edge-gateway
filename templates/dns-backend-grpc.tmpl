@@ -1,0 +1,31 @@
+# Backend for ${DNS_NAME} (gRPC)
+# Generated automatically - DO NOT EDIT MANUALLY
+# 
+# gRPC usa HTTP/2 sobre TLS. Este template configura un backend para tráfico gRPC interno.
+# El frontend HTTPS (443) ya tiene ALPN h2 configurado, así que acepta conexiones HTTP/2.
+#
+# IMPORTANTE:
+# - Los servidores deben usar 'proto h2' para HTTP/2
+# - Health check: TCP (recomendado) o HTTP/2 según tu servicio
+# - Para gRPC con TLS backend, añade 'ssl verify none' o configura certificados
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+    
+    # Health check TCP (recomendado para gRPC; solo verifica que el puerto responda)
+    # Si tu servicio gRPC tiene health check HTTP/2, descomenta las líneas siguientes:
+    # option httpchk GET /grpc.health.v1.Health/Check
+    # http-check expect status 200
+    # http-check send-state
+    
+    # Servidores gRPC: usa 'proto h2' para HTTP/2
+    # Ejemplo interno (host o contenedor):
+    server grpc1 host.docker.internal:50051 check proto h2 inter 5s fall 3 rise 2
+    # server grpc2 192.168.1.10:50051 check proto h2 inter 5s fall 3 rise 2
+    
+    # Si el backend gRPC usa TLS, añade 'ssl verify none' (o configura certificados):
+    # server grpc1 192.168.1.10:50051 check ssl verify none proto h2 inter 5s fall 3 rise 2
+    
+    # Timeouts específicos para gRPC (streaming puede ser largo)
+    timeout server 5m
+    timeout connect 10s

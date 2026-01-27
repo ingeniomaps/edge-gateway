@@ -1,0 +1,201 @@
+# Docker Compose file for HAProxy Load Balancer
+# Following Docker Compose V2 specification and 2026 best practices
+# No version field needed - Compose V2 handles feature validation automatically
+
+services:
+  haproxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      tags:
+        - haproxy-lb:latest
+        - haproxy-lb:3.3
+    
+    container_name: haproxy-lb
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # User and group (non-root for security)
+    # HAProxy runs as haproxy user inside container (UID/GID 99)
+    # Uncomment if you need to override:
+    # user: "99:99"
+    
+    # Ports mapping (2026 best practices - use ingress mode for better networking)
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "8404:8404/tcp"
+    
+    # Volumes
+    volumes:
+      # Mount .env file for DNS configuration (create if doesn't exist)
+      - type: bind
+        source: ./.env
+        target: /usr/local/etc/haproxy/.env
+        read_only: true
+        bind:
+          create_host_path: true
+      # Mount templates (dns-backend.tmpl, dns-backend-api.tmpl, etc.) para que cambios se apliquen sin rebuild
+      - type: bind
+        source: ./templates
+        target: /usr/local/etc/haproxy/templates
+        read_only: true
+        bind:
+          create_host_path: true
+      # Mount DNS config directory (for generated configs)
+      - type: bind
+        source: ./dns-configs
+        target: /usr/local/etc/haproxy/dns.d
+        bind:
+          create_host_path: true
+      # Certificados: ./certs (haproxy.pem o layout certbot conf/live/DOMAIN)
+      # ensure-ssl en entrypoint: valida, combina certbot→haproxy.pem o genera self-signed
+      - type: bind
+        source: ./certs
+        target: /etc/ssl/certs
+        bind:
+          create_host_path: true
+      # Mount custom config (optional, for runtime changes)
+      # - type: bind
+      #   source: ./haproxy.cfg
+      #   target: /usr/local/etc/haproxy/haproxy.cfg
+      #   read_only: true
+      # Logs
+      - type: bind
+        source: ./logs
+        target: /var/log/haproxy
+        bind:
+          create_host_path: true
+    
+    # Para que host.docker.internal llegue al host (app en máquina, HAProxy en Docker)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    
+    # Networks
+    networks:
+      haproxy-network:
+        aliases:
+          - haproxy
+          - lb
+    
+    # Environment variables
+    environment:
+      - TZ=${TZ:-UTC}
+      - LANG=C.UTF-8
+    
+    # Resource limits (2026 best practices)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: unless-stopped
+        delay: 5s
+        window: 120s
+    
+    # Security options (2026 best practices)
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:docker-default
+      - seccomp:unconfined  # HAProxy may need this, adjust if needed
+    
+    # Capabilities (principle of least privilege)
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    
+    # Read-only root filesystem (additional security)
+    # Note: /etc/ssl/certs and /etc/ssl/private need to be writable for certificate generation
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+      - /var/run:noexec,nosuid,size=50m
+      - /var/lib/haproxy:noexec,nosuid,size=100m
+      - /run:noexec,nosuid,size=50m
+    
+    # Ulimits (2026 best practices)
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc: 4096
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # Graceful shutdown
+    stop_grace_period: 10s
+    stop_signal: SIGTERM
+    
+    # Logging configuration (2026 best practices)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+        labels: "service,environment"
+    
+    # Labels for metadata and organization (2026 best practices)
+    labels:
+      - "com.haproxy.service=load-balancer"
+      - "com.haproxy.version=3.3"
+      - "com.haproxy.description=HAProxy Load Balancer"
+      - "com.docker.compose.project=edge-gateway"
+      - "com.docker.compose.service=haproxy"
+      - "traefik.enable=false"
+      - "prometheus.scrape=true"
+      - "prometheus.port=8404"
+      - "prometheus.path=/stats;csv"
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ['cert']
+    volumes:
+      - ./certs/conf:/etc/letsencrypt:rw
+    command: ["renew"]
+    networks:
+      - haproxy-network
+
+# Networks configuration
+networks:
+  haproxy-network:
+    name: haproxy-network
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: haproxy-br0
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.bridge.enable_icc: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+    labels:
+      - "com.haproxy.network=load-balancer"
+      - "com.docker.compose.network=haproxy-network"
+
+# Volumes (if needed for named volumes in the future)
+# volumes:
+#   haproxy-certs:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       device: ./certs
+#     labels:
+#       - "com.haproxy.volume=certificates"

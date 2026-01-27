@@ -1,0 +1,11 @@
+# Backend for ${DNS_NAME}
+# Generated automatically - DO NOT EDIT MANUALLY
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+    option httpchk GET /health
+    http-check expect status 200
+    http-check send-state
+    # Default dev server; replace with your services
+    server dev 127.0.0.1:8081 check inter 5s fall 3 rise 2
+    cookie SERVERID insert indirect nocache httponly secure

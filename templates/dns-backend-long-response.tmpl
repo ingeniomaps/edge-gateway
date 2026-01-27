@@ -1,0 +1,38 @@
+# Backend for ${DNS_NAME} (Respuestas largas: IA, procesamiento pesado)
+# Generated automatically - DO NOT EDIT MANUALLY
+# 
+# Para respuestas que tardan mucho (IA, procesamiento de imágenes/video, etc.):
+# - timeout server: tiempo máximo de procesamiento
+# - timeout client: tiempo que el cliente espera la respuesta
+# - timeout http-request: tiempo máximo del request completo
+#
+# IMPORTANTE:
+# - Ajusta timeouts según tu caso (IA puede tardar 2-5 min, procesamiento video 10-30 min)
+# - Considera usar balance leastconn para distribuir carga de procesos largos
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+    # Para procesos largos, considera: balance leastconn
+    
+    # Timeouts largos para respuestas de IA/procesamiento pesado
+    # Ajusta según tu caso: 5m para IA rápida, 30m para procesamiento pesado
+    timeout client 30m
+    timeout server 30m
+    timeout http-request 30m
+    timeout connect 10s
+    
+    # Health check: TCP o HTTP según tu servicio
+    # option httpchk GET /health
+    # http-check expect status 200
+    # http-check send-state
+    
+    # Servidores de procesamiento
+    server ai1 host.docker.internal:3000 check inter 5s fall 3 rise 2
+    # server ai2 192.168.1.10:3000 check inter 5s fall 3 rise 2
+    
+    # Si el backend usa TLS, añade 'ssl verify none':
+    # server ai1 192.168.1.10:3000 check ssl verify none inter 5s fall 3 rise 2
+    
+    # Opcional: aumentar buffers para respuestas grandes
+    # tune.bufsize 65536
+    # tune.maxrewrite 32768

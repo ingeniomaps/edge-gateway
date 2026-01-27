@@ -1,0 +1,45 @@
+# Overrides para producción (modelo DNS: .env, dns-configs, certs se mantienen del base)
+# Uso: docker compose -f docker-compose.yml -f compose.production.yml up -d
+#
+# NO se reemplazan volumes: se siguen usando .env, dns-configs, certs, logs del
+# docker-compose.yml. Para certificados en /etc/ssl/haproxy, monta sobre ./certs
+# en tu propio override.
+
+services:
+  haproxy:
+    restart: always
+
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        window: 120s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+        compress: "true"
+        labels: "service,environment"
+        tag: "{{.Name}}/{{.ID}}"
+
+    labels:
+      - "com.haproxy.service=load-balancer"
+      - "com.haproxy.version=3.3"
+      - "com.haproxy.environment=production"
+      - "com.haproxy.description=HAProxy Load Balancer - Production"
+      - "com.docker.compose.project=edge-gateway"
+      - "com.docker.compose.service=haproxy"
+      - "traefik.enable=false"
+      - "prometheus.scrape=true"
+      - "prometheus.port=8404"
+      - "prometheus.path=/stats;csv"
+      - "monitoring.enabled=true"

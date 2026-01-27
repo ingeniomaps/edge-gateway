@@ -1,0 +1,19 @@
+# Runtime / generados (se montan como volumen)
+logs/
+dns-configs/
+certs/
+
+# Secrets y claves (se montan en runtime)
+.env
+*.pem
+*.key
+*.crt
+
+# Repo y documentación (no se copian en el Dockerfile)
+.git/
+.gitignore
+*.md
+
+# Evitar ruido en el contexto de build
+*.log
+*.state
