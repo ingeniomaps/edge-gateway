@@ -7,16 +7,11 @@ on:
       - develop
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g., develop, latest, v1.0.0)'
-        required: true
-        default: 'develop'
+        description: 'Extra tag to publish (e.g. develop, latest)'
+        required: false
 
 env:
   REGISTRY: ghcr.io
@@ -25,6 +20,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
@@ -43,29 +39,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            # Inmutable (NUNCA se rompe)
+            type=sha
+
+            # Tags de branch (develop, main)
             type=ref,event=branch
-            type=ref,event=pr
+
+            # Tags semver (v1.2.3, v1.2)
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
+            # latest solo desde main
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+            # Tag manual (workflow_dispatch)
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/amd64
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Image digest
-        run: echo "Image pushed with digest ${{ steps.meta.outputs.digest }}"
+        run: |
+          echo "Image pushed successfully"
+          echo "Digest: ${{ steps.meta.outputs.digest }}"
