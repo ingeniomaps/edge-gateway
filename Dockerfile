@@ -3,6 +3,15 @@ FROM haproxy:3.3-alpine
 # sed ya en Alpine. openssl no se instala en imagen (fallos en algunos entornos).
 # Para self-signed: use make setup-ssl (mkcert) o monte certs/haproxy.pem.
 
+# OCI Labels for container metadata
+LABEL org.opencontainers.image.title="Edge Gateway - HAProxy Load Balancer"
+LABEL org.opencontainers.image.description="HAProxy 3.3 load balancer configured for production with HTTP/HTTPS support, dynamic DNS configuration, SSL/TLS termination, health checks, statistics, and security best practices. Features include SNI auto, rate limiting, modern security headers, and configurable templates."
+LABEL org.opencontainers.image.url="https://github.com/ingeniomaps/edge-gateway"
+LABEL org.opencontainers.image.source="https://github.com/ingeniomaps/edge-gateway"
+LABEL org.opencontainers.image.version="3.3"
+LABEL org.opencontainers.image.vendor="IngenioMaps"
+LABEL org.opencontainers.image.licenses="MIT"
+
 # Switch to root to create directories and copy files
 USER root
 
