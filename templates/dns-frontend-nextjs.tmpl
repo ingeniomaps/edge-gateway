@@ -1,0 +1,35 @@
+# Backend Next.js para ${DNS_NAME}
+# Generado automáticamente - NO EDITAR MANUALMENTE
+# Uso: DNS_TEMPLATE_api=dns-frontend-nextjs.tmpl
+# SSL/certs: usa el frontend principal https_frontend (igual que dns-backend-api.tmpl)
+# Servidor: host.docker.internal = host (Next.js en localhost:3000 o 4100)
+
+backend backend_${DNS_NORMALIZED}
+    mode http
+    balance roundrobin
+
+    # Health check: deshabilitado para máximo rendimiento (Next.js local)
+    # Si necesitas health check, descomenta y ajusta el endpoint:
+    # option httpchk GET /api/health
+    # http-check expect status 200
+
+    # Keep-alive para mejor rendimiento (HTTP/1.1 persistent connections)
+    option http-keep-alive
+
+    # WebSocket (HMR) y SSR
+    timeout server 30s
+    timeout tunnel 1h
+    timeout http-keep-alive 30s
+
+    # Servidor: host.docker.internal:4100 (sin health check para máximo rendimiento)
+    # inter 30s = check cada 30s (muy relajado); si falla, marca down
+    server nextjs1 host.docker.internal:4100 check inter 30s fall 3 rise 1
+
+    # Headers específicos Next.js (sobrescriben los del frontend principal)
+    http-response set-header X-Frame-Options "SAMEORIGIN"
+    http-response set-header Referrer-Policy "strict-origin-when-cross-origin"
+    http-response set-header Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    # CSP permisivo para Next.js: inline scripts, eval, estilos inline
+    http-response set-header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+
+    cookie SERVERID insert indirect nocache httponly secure
