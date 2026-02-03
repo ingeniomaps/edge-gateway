@@ -72,7 +72,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/Dockerfile
+          file: ./Dockerfile
           platforms: linux/amd64
           push: ${{ steps.docker-creds.outputs.has_credentials == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
