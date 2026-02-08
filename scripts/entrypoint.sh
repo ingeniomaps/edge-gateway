@@ -48,7 +48,8 @@ if [ -f "${ENV_FILE}" ]; then
     if [ -f /tmp/ssl_disable_https ] || ! ls "${HAPROXY_CRTS_DIR}"/*.pem 1>/dev/null 2>&1; then
         rm -f /tmp/ssl_disable_https 2>/dev/null
         echo "Warning: Certificate not found or disabled, commenting out HTTPS frontend..."
-        sed -i '/^frontend https_frontend/,/^frontend\|^backend\|^# Include\|^include\|^$/ {
+        sed -i '/^frontend https_frontend/,/^backend unknown_host/ {
+            /^backend unknown_host$/b
             /^frontend https_frontend/ s/^/#/
             /^[^#]/ s/^/    #/
         }' "${WORKING_CONFIG}" 2>/dev/null || true
@@ -60,7 +61,8 @@ else
     if [ -f /tmp/ssl_disable_https ] || ! ls "${HAPROXY_CRTS_DIR}"/*.pem 1>/dev/null 2>&1; then
         rm -f /tmp/ssl_disable_https 2>/dev/null
         cp "${CONFIG_FILE}" "${WORKING_CONFIG}" 2>/dev/null || WORKING_CONFIG="${CONFIG_FILE}"
-        sed -i '/^frontend https_frontend/,/^frontend\|^backend\|^# Include\|^include\|^$/ {
+        sed -i '/^frontend https_frontend/,/^backend unknown_host/ {
+            /^backend unknown_host$/b
             /^frontend https_frontend/ s/^/#/
             /^[^#]/ s/^/    #/
         }' "${WORKING_CONFIG}" 2>/dev/null || true
@@ -75,6 +77,16 @@ if ! haproxy -c -f "${CONFIG_FILE}"; then
 fi
 
 echo "Configuration validated successfully"
+
+# Let's Encrypt: arrancar httpd para ACME challenge y proceso de renovación diaria
+_ssl_type=""
+[ -f "${ENV_FILE}" ] && _ssl_type=$(grep -E '^SSL_CERT_TYPE=' "${ENV_FILE}" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr -d "'" | xargs)
+if [ "$_ssl_type" = "letsencrypt" ]; then
+    mkdir -p /var/lib/haproxy/acme-challenge/.well-known/acme-challenge
+    busybox httpd -p 54321 -h /var/lib/haproxy/acme-challenge -f &
+    ( while true; do sleep 86400; /usr/local/bin/renew-ssl.sh; done ) &
+fi
+
 echo "Starting HAProxy..."
 
 FINAL_CONFIG="${WORKING_CONFIG}"

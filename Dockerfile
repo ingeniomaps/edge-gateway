@@ -15,9 +15,15 @@ LABEL org.opencontainers.image.licenses="MIT"
 # Switch to root to create directories and copy files
 USER root
 
+# Install mkcert and certbot for automatic cert generation (SSL_CERT_TYPE=mkcert|letsencrypt)
+RUN apk add --no-cache \
+    --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing mkcert \
+    certbot
+
 # Create necessary directories
 RUN mkdir -p /usr/local/etc/haproxy/dns.d \
-    /usr/local/etc/haproxy/templates
+    /usr/local/etc/haproxy/templates \
+    /usr/local/etc/haproxy/errors
 
 # Copy configuration
 COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
@@ -27,6 +33,7 @@ COPY --chmod=755 scripts/generate-dns-config.sh /usr/local/bin/generate-dns-conf
 COPY --chmod=755 scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --chmod=755 scripts/watch-dns-changes.sh /usr/local/bin/watch-dns-changes.sh
 COPY --chmod=755 scripts/ensure-ssl.sh /usr/local/bin/ensure-ssl.sh
+COPY --chmod=755 scripts/renew-ssl.sh /usr/local/bin/renew-ssl.sh
 COPY --chmod=755 scripts/reload-config.sh /usr/local/bin/reload-config.sh
 
 # Copy templates (todos los .tmpl; en desarrollo se suele montar ./templates por volumen)
