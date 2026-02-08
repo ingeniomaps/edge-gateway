@@ -117,6 +117,7 @@ DNS_TEMPLATE_grpc=dns-backend-grpc.tmpl
 ```
 
 El template `dns-backend-grpc.tmpl` incluye:
+
 - `mode http` con `proto h2` en los servidores (gRPC usa HTTP/2)
 - Health check TCP (o HTTP/2 si tu servicio lo soporta)
 - Timeouts extendidos para streaming
@@ -135,6 +136,7 @@ DNS_TEMPLATE_ws=dns-backend-websocket.tmpl
 ```
 
 El template `dns-backend-websocket.tmpl` incluye:
+
 - `option http-server-close` (recomendado para WebSocket)
 - `timeout tunnel 1h` (conexiones WebSocket inactivas)
 - `timeout client/server 1h` (conexiones persistentes)
@@ -151,6 +153,7 @@ DNS_TEMPLATE_stream=dns-backend-streaming.tmpl
 ```
 
 El template `dns-backend-streaming.tmpl` incluye:
+
 - `option http-keep-alive` (mantiene conexión abierta, opuesto a http-server-close)
 - `timeout client/server 10m` (ajusta según frecuencia de pings/eventos)
 - `timeout http-request 10m` (para requests de streaming)
@@ -167,20 +170,21 @@ DNS_TEMPLATE_ai=dns-backend-long-response.tmpl
 ```
 
 El template `dns-backend-long-response.tmpl` incluye:
+
 - `timeout client/server 30m` (ajusta según tu caso: 5m para IA rápida, 30m para video)
 - `timeout http-request 30m` (tiempo máximo del request completo)
 - Opcional: `balance leastconn` para distribuir carga de procesos largos
 
 ## Resumen de Templates Disponibles
 
-| Template | Uso | Características |
-|----------|-----|-----------------|
-| `dns-backend.tmpl` | HTTP estándar (por defecto) | Health check HTTP, timeouts estándar (50s) |
-| `dns-backend-api.tmpl` | API REST | Health check TCP, `host.docker.internal` |
-| `dns-backend-grpc.tmpl` | gRPC | HTTP/2 (`proto h2`), timeouts 5m, streaming |
-| `dns-backend-websocket.tmpl` | WebSocket | `http-server-close`, `timeout tunnel 1h`, conexiones persistentes |
-| `dns-backend-streaming.tmpl` | SSE/Streaming HTTP | `http-keep-alive`, timeouts 10m, conexiones largas |
-| `dns-backend-long-response.tmpl` | Respuestas largas (IA) | Timeouts 30m, `leastconn` opcional, buffers grandes |
+| Template                         | Uso                         | Características                                                   |
+| -------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| `dns-backend.tmpl`               | HTTP estándar (por defecto) | Health check HTTP, timeouts estándar (50s)                        |
+| `dns-backend-api.tmpl`           | API REST                    | Health check TCP, `host.docker.internal`                          |
+| `dns-backend-grpc.tmpl`          | gRPC                        | HTTP/2 (`proto h2`), timeouts 5m, streaming                       |
+| `dns-backend-websocket.tmpl`     | WebSocket                   | `http-server-close`, `timeout tunnel 1h`, conexiones persistentes |
+| `dns-backend-streaming.tmpl`     | SSE/Streaming HTTP          | `http-keep-alive`, timeouts 10m, conexiones largas                |
+| `dns-backend-long-response.tmpl` | Respuestas largas (IA)      | Timeouts 30m, `leastconn` opcional, buffers grandes               |
 
 **Nota sobre timeouts:** Los timeouts en `defaults` (50s client/server) son para HTTP estándar. Los templates especializados sobrescriben estos valores según necesidad.
 
@@ -208,11 +212,13 @@ docker compose logs haproxy | grep -i dns
 ### Los DNS no se generan
 
 1. Verifica que `.env` existe y contiene `DNS_LIST` o `DNS_LIST_*`:
+
    ```bash
    cat .env | grep -E '^DNS_LIST'
    ```
 
 2. Verifica que el contenedor puede leer `.env`:
+
    ```bash
    docker compose exec haproxy cat /usr/local/etc/haproxy/.env
    ```
@@ -225,6 +231,7 @@ docker compose logs haproxy | grep -i dns
 ### Configuraciones no se actualizan
 
 1. Reinicia el contenedor después de cambiar `.env`:
+
    ```bash
    docker compose restart haproxy
    ```
@@ -237,6 +244,7 @@ docker compose logs haproxy | grep -i dns
 ### Error en validación de HAProxy
 
 1. Verifica la sintaxis de los archivos generados:
+
    ```bash
    docker compose exec haproxy haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
    ```
